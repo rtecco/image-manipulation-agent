@@ -15,6 +15,7 @@ The generated code should be simple, efficient and follow Python best practices.
 - pytest
 - mypy
 - ruff
+- langchain for Claude and Gemini
 
 ## Code Conventions
 - Generate type hints for Python code
