@@ -1,0 +1,62 @@
+[project]
+name = "vision-agent"
+version = "0.1.0"
+description = "LangGraph agent for visual task processing with iterative code generation"
+authors = [{name = "Vision Agent", email = "vision@agent.com"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "langgraph",
+    "langchain",
+    "langchain-anthropic",
+    "langchain-google-genai",
+    "pillow",
+    "matplotlib",
+    "opencv-python",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "scikit-image",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "mypy",
+    "ruff",
+    "types-pillow",
+]
+viz = [
+    "pygraphviz",
+    "pillow",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+    "mypy", 
+    "ruff",
+    "types-pillow",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

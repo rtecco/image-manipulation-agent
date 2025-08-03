@@ -1,0 +1,33 @@
+"""Template for code execution with state persistence."""
+
+import pickle
+import sys
+import os
+from PIL import Image
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import cv2
+from sklearn import *
+from skimage import *
+
+# Load state
+try:
+    with open('{state_file}', 'rb') as f:
+        globals().update(pickle.load(f))
+except:
+    pass
+
+# Execute user code
+try:
+{user_code}
+    
+    # Save updated state
+    state_vars = {{k: v for k, v in globals().items() 
+                  if not k.startswith('_') and k not in ['pickle', 'sys', 'os', 'Image', 'plt', 'np', 'pd', 'cv2']}}
+    with open('{state_file}', 'wb') as f:
+        pickle.dump(state_vars, f)
+        
+except Exception as e:
+    print(f"Error: {{e}}", file=sys.stderr)
+    sys.exit(1)
