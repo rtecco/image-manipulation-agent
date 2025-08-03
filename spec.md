@@ -8,10 +8,10 @@ The generated code should be simple, efficient and follow Python best practices.
 
 - Keep the directory structure flat. Source and test code together.
 - Test code should have the `_test.py` suffix.
-- uv will be used for package and project management.
 - Create and update a pyproject.toml file as needed
 
 ### Tooling
+- uv
 - pytest
 - mypy
 - ruff
