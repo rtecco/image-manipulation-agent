@@ -18,6 +18,7 @@ The generated code should be simple, efficient and follow Python best practices.
 
 ## Code Conventions
 - Generate type hints for Python code
+- Don't generate module comments
 
 ### Components
 1. A main driver. Sets up the other components.
