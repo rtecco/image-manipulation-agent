@@ -5,7 +5,6 @@ Create an agent in LangGraph that takes a prompt including a visual task and a s
 The generated code should be simple, efficient and follow Python best practices.
 
 ### Project Structure
-
 - Keep the directory structure flat. Source and test code together.
 - Test code should have the `_test.py` suffix.
 - Create and update a pyproject.toml file as needed
@@ -21,7 +20,6 @@ The generated code should be simple, efficient and follow Python best practices.
 - Generate type hints for Python code
 
 ### Components
-
 1. A main driver. Sets up the other components.
 2. Program runner. Takes a snippet of Python code and evaluates in a sandbox that persists in-between iterations.
 3. LangGraph agent
