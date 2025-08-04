@@ -1,5 +1,3 @@
-"""Main driver for the vision agent application."""
-
 from typing import Optional
 import argparse
 import sys
@@ -11,7 +9,6 @@ from runner import ProgramRunner
 
 
 def main() -> None:
-    """Main entry point for the vision agent."""
     parser = argparse.ArgumentParser(description="Vision Agent for visual task processing")
     parser.add_argument("--task", required=True, help="Path to task description file")
     parser.add_argument("--image", required=True, help="Path to source image")
