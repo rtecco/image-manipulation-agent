@@ -1,5 +1,3 @@
-"""LangGraph agent for visual task processing with iterative code generation."""
-
 import re
 from typing import Dict, Any, Optional, List, TypedDict
 from PIL import Image
