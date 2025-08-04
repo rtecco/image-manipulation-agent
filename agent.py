@@ -190,7 +190,7 @@ class VisionAgent:
     def run(self, task: str, image: Image.Image) -> str:
         """Run the agent on a task with an image."""
         # Load image into runner
-        self.runner.load_image(image, 0)
+        self.runner.load_image_clue(image, 0)
         
         # Initialize state
         initial_state: AgentState = {

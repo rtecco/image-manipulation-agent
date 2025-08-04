@@ -21,7 +21,7 @@ class ProgramRunner:
         template_path = Path(__file__).parent / "execution_template.py.tmpl"
         self.execution_template = template_path.read_text()
         
-    def load_image(self, image: Image.Image, index: int = 0) -> None:
+    def load_image_clue(self, image: Image.Image, index: int = 0) -> None:
         """Load an image as a global variable image_clue_i."""
         variable_name = f"image_clue_{index}"
         self.state[variable_name] = image
