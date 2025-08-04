@@ -3,11 +3,80 @@ import sys
 import os
 from PIL import Image
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import pandas as pd
 import cv2
 from sklearn import *
 from skimage import *
+import io
+
+# Set matplotlib to non-interactive backend and capture plots
+matplotlib.use('Agg')
+_captured_plots = []
+
+# Define shared capture logic
+def _capture_current_figure():
+    fig = plt.gcf()
+    if fig.get_axes():  # Only capture if there's content
+        buf = io.BytesIO()
+        fig.savefig(buf, format='jpg', bbox_inches='tight', dpi=100)
+        buf.seek(0)
+        plot_image = Image.open(buf).copy()
+        _captured_plots.append(plot_image)
+        buf.close()
+    plt.close(fig)
+
+# Define our custom show function
+def _capture_show():
+    _capture_current_figure()
+
+# Define our custom imshow function that auto-captures
+def _capture_imshow(*args, **kwargs):
+    # Call original imshow
+    result = _original_imshow(*args, **kwargs)
+    # Auto-capture the plot
+    _capture_current_figure()
+    return result
+
+# Store originals and apply our overrides
+_original_show = plt.show
+_original_imshow = plt.imshow
+plt.show = _capture_show
+plt.imshow = _capture_imshow
+
+# Install import hook to maintain our plt.show override
+import importlib.util
+import importlib.machinery
+
+class MatplotlibImportHook(importlib.machinery.ModuleSpec):
+    def __init__(self):
+        pass
+
+class MatplotlibFinder:
+    def find_spec(self, name, path, target=None):
+        if name == 'matplotlib.pyplot':
+            # Let the normal import happen first
+            spec = importlib.util.find_spec(name)
+            if spec:
+                # Wrap the loader to apply our override after import
+                original_exec_module = spec.loader.exec_module
+                def patched_exec_module(module):
+                    # Execute the normal module loading
+                    result = original_exec_module(module)
+                    # Reapply our overrides
+                    module.show = _capture_show
+                    module.imshow = _capture_imshow
+                    return result
+                spec.loader.exec_module = patched_exec_module
+            return spec
+        return None
+
+# Install the finder
+import sys
+_plt_finder = MatplotlibFinder()
+if _plt_finder not in sys.meta_path:
+    sys.meta_path.insert(0, _plt_finder)
 
 # Load state
 try:
@@ -20,9 +89,29 @@ except:
 try:
 {user_code}
     
-    # Save updated state
+    # Save updated state - only functions and variables that can be pickled
+    import types
+    
+    def is_picklable(obj):
+        try:
+            pickle.dumps(obj)
+            return True
+        except:
+            return False
+    
     state_vars = {{k: v for k, v in globals().items() 
-                  if not k.startswith('_') and k not in ['pickle', 'sys', 'os', 'Image', 'plt', 'np', 'pd', 'cv2']}}
+                  if not k.startswith('_') 
+                  and not isinstance(v, types.ModuleType)
+                  and k not in ['MatplotlibImportHook', 'MatplotlibFinder', 'is_picklable']
+                  and is_picklable(v)}}
+    
+    # Add captured plots to state, starting from next available index
+    existing_mm_indices = [int(k.split('_')[-1]) for k in state_vars.keys() if k.startswith('mm_clue_')]
+    next_mm_index = max(existing_mm_indices) + 1 if existing_mm_indices else 0
+
+    for i, plot_img in enumerate(_captured_plots):
+        state_vars[f'mm_clue_{{next_mm_index + i}}'] = plot_img
+
     with open('{state_file}', 'wb') as f:
         pickle.dump(state_vars, f)
         
