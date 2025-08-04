@@ -1,12 +1,10 @@
 import subprocess
 import sys
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple
 import pickle
 import tempfile
-import os
 from pathlib import Path
 from PIL import Image
-
 
 class ProgramRunner:
     """Executes Python code snippets with persistence across iterations."""
@@ -43,6 +41,8 @@ class ProgramRunner:
             user_code=self._indent_code(code)
         )
 
+        print(execution_script)
+
         # Execute in subprocess
         try:
             result = subprocess.run(
@@ -70,12 +70,45 @@ class ProgramRunner:
         return '\n'.join('    ' + line for line in code.split('\n'))
     
     def get_state(self) -> Dict[str, Any]:
-        """Get current execution state."""
         return self.state.copy()
     
     def clear_state(self) -> None:
-        """Clear execution state."""
         self.state.clear()
+
+    def print_state(self, show_images: bool = False) -> None:
+        if self.state:
+            print("\n=== FINAL STATE ===")
+            import pprint
+            pp = pprint.PrettyPrinter(indent=2, width=80, depth=3)
+            for key, value in self.state.items():
+                print(f"\n{key}: {type(value).__name__}")
+                
+                # Special handling for PIL Images
+                if isinstance(value, Image.Image):
+                    if not show_images:
+                        continue
+
+                    print(f"  Size: {value.size}, Mode: {value.mode}")
+                    try:
+                        # Create a copy with the key as title for display
+                        display_image = value.copy()
+                        import matplotlib.pyplot as plt
+                        plt.figure()
+                        plt.imshow(display_image)
+                        plt.title(f"State Variable: {key}")
+                        plt.axis('off')
+                        plt.show()
+                    except:
+                        print(f"  Could not display image: {key}")
+                else:
+                    try:
+                        pp.pprint(value)
+                    except:
+                        # Fallback for objects that can't be pretty printed
+                        print(f"  {repr(value)[:200]}{'...' if len(repr(value)) > 200 else ''}")
+        else:
+            print("\n=== FINAL STATE ===")
+            print("(empty)")
 
 
 if __name__ == "__main__":
@@ -98,7 +131,6 @@ if __name__ == "__main__":
     
     program_code = program_path.read_text()
     
-    # Create runner
     runner = ProgramRunner()
     
     # Load images if provided
@@ -112,10 +144,8 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"Error loading image {i} from {image_arg}: {e}", file=sys.stderr)
     
-    # Execute code
     stdout, stderr, success = runner.execute_code(program_code)
     
-    # Print results
     print("=== EXECUTION RESULTS ===")
     print(f"Success: {success}")
     
@@ -127,35 +157,4 @@ if __name__ == "__main__":
         print("\n=== STDERR ===")
         print(stderr)
     
-    # Print current state
-    state = runner.get_state()
-    if state:
-        print("\n=== FINAL STATE ===")
-        import pprint
-        pp = pprint.PrettyPrinter(indent=2, width=80, depth=3)
-        for key, value in state.items():
-            print(f"\n{key}: {type(value).__name__}")
-            
-            # Special handling for PIL Images
-            if isinstance(value, Image.Image):
-                print(f"  Size: {value.size}, Mode: {value.mode}")
-                try:
-                    # Create a copy with the key as title for display
-                    display_image = value.copy()
-                    import matplotlib.pyplot as plt
-                    plt.figure()
-                    plt.imshow(display_image)
-                    plt.title(f"State Variable: {key}")
-                    plt.axis('off')
-                    plt.show()
-                except:
-                    print(f"  Could not display image: {key}")
-            else:
-                try:
-                    pp.pprint(value)
-                except:
-                    # Fallback for objects that can't be pretty printed
-                    print(f"  {repr(value)[:200]}{'...' if len(repr(value)) > 200 else ''}")
-    else:
-        print("\n=== FINAL STATE ===")
-        print("(empty)")
+    runner.print_state()

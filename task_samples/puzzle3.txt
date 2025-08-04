@@ -1,0 +1,1 @@
+Change the color of the largest piece of furniture to dark grey.
