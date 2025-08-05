@@ -96,7 +96,11 @@ try:
         try:
             pickle.dumps(obj)
             return True
-        except:
+        except Exception as e:
+            # Check if this is a PIL Image that failed pickling
+            if hasattr(obj, '__class__') and 'PIL' in str(type(obj)) and 'Image' in str(type(obj)):
+                print(f"ERROR: PIL Image failed pickling test: {{e}}", file=sys.stderr)
+                raise RuntimeError(f"PIL Image failed pickling: {{e}}")
             return False
     
     state_vars = {{k: v for k, v in globals().items() 
