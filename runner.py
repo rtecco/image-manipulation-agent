@@ -49,7 +49,7 @@ class ProgramRunner:
                 [sys.executable, '-c', execution_script],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=90,
                 cwd=self.temp_dir
             )
             
