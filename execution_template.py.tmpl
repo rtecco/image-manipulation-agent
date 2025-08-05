@@ -1,4 +1,4 @@
-import pickle
+import dill
 import sys
 import os
 from PIL import Image
@@ -81,7 +81,7 @@ if _plt_finder not in sys.meta_path:
 # Load state
 try:
     with open('{state_file}', 'rb') as f:
-        globals().update(pickle.load(f))
+        globals().update(dill.load(f))
 except:
     pass
 
@@ -92,22 +92,22 @@ try:
     # Save updated state - only functions and variables that can be pickled
     import types
     
-    def is_picklable(obj):
+    def is_dillable(obj):
         try:
-            pickle.dumps(obj)
+            dill.dumps(obj)
             return True
         except Exception as e:
-            # Check if this is a PIL Image that failed pickling
+            # Check if this is a PIL Image that failed serialization
             if hasattr(obj, '__class__') and 'PIL' in str(type(obj)) and 'Image' in str(type(obj)):
-                print(f"ERROR: PIL Image failed pickling test: {{e}}", file=sys.stderr)
-                raise RuntimeError(f"PIL Image failed pickling: {{e}}")
+                print(f"ERROR: PIL Image failed dill serialization test: {{e}}", file=sys.stderr)
+                raise RuntimeError(f"PIL Image failed dill serialization: {{e}}")
             return False
     
     state_vars = {{k: v for k, v in globals().items() 
                   if not k.startswith('_') 
                   and not isinstance(v, types.ModuleType)
-                  and k not in ['MatplotlibImportHook', 'MatplotlibFinder', 'is_picklable']
-                  and is_picklable(v)}}
+                  and k not in ['MatplotlibImportHook', 'MatplotlibFinder', 'is_dillable']
+                  and is_dillable(v)}}
     
     # Add captured plots to state, starting from next available index
     existing_mm_indices = [int(k.split('_')[-1]) for k in state_vars.keys() if k.startswith('mm_clue_')]
@@ -117,7 +117,7 @@ try:
         state_vars[f'mm_clue_{{next_mm_index + i}}'] = plot_img
 
     with open('{state_file}', 'wb') as f:
-        pickle.dump(state_vars, f)
+        dill.dump(state_vars, f)
         
 except Exception as e:
     print(f"Error: {{e}}", file=sys.stderr)

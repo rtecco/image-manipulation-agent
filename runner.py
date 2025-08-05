@@ -1,7 +1,7 @@
 import subprocess
 import sys
 from typing import Dict, Any, Tuple
-import pickle
+import dill
 import tempfile
 from pathlib import Path
 from PIL import Image
@@ -33,7 +33,7 @@ class ProgramRunner:
         """
         # Save current state
         with open(self.state_file, 'wb') as f:
-            pickle.dump(self.state, f)
+            dill.dump(self.state, f)
             
         # Create execution script from template
         execution_script = self.execution_template.format(
@@ -56,7 +56,7 @@ class ProgramRunner:
             # Load updated state
             if self.state_file.exists():
                 with open(self.state_file, 'rb') as f:
-                    self.state.update(pickle.load(f))                    
+                    self.state.update(dill.load(f))                    
                     
             return result.stdout, result.stderr, result.returncode == 0
             

@@ -5,7 +5,7 @@ REPL script to load the most recent state file and start an interactive session.
 
 import os
 import sys
-import pickle
+import dill
 import tempfile
 import glob
 from pathlib import Path
@@ -28,10 +28,10 @@ def find_most_recent_state_file() -> Optional[Path]:
     return max(state_files, key=lambda f: f.stat().st_mtime)
 
 def load_state(state_file: Path) -> Dict[str, Any]:
-    """Load state from pickle file."""
+    """Load state from dill file."""
     try:
         with open(state_file, 'rb') as f:
-            return pickle.load(f)
+            return dill.load(f)
     except Exception as e:
         print(f"Error loading state file {state_file}: {e}")
         return {}
