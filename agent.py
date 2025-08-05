@@ -122,7 +122,7 @@ class VisionAgent:
         
         workflow.add_edge("generate_plan", "generate_code")
         workflow.add_edge("generate_code", "execute_code")
-        workflow.add_edge("redo_generate_code", "execute_code")
+        workflow.add_edge("redo_generate_code", "generate_code")
         workflow.add_edge("next_iteration", "generate_code")
 
         workflow.add_conditional_edges(
@@ -180,9 +180,18 @@ class VisionAgent:
 
         return updates
     
-    def _redo_generate_code(self, state: AgentState) -> Dict[str, Any]:        
-        raise RuntimeError()
+    def _redo_generate_code(self, state: AgentState) -> Dict[str, Any]:
+        last_result = state["code_results"][-1]
+        results = "Iteration {i} generated this code: {code}\nIt failed with the following error {stderr}. Please fix the error. It is still iteration {i}.".format(i=state["iteration"],code=last_result["code"],stderr=last_result["stderr"])
 
+        msg = HumanMessage(content=results)
+        print(msg)
+        state["messages"].append(msg)
+
+        return {
+            "message": state["messages"]
+        }
+    
     def _execute_code(self, state: AgentState) -> Dict[str, Any]:
         """Execute the generated code."""
 
@@ -214,7 +223,7 @@ class VisionAgent:
 
     def _next_iteration(self, state: AgentState) -> Dict[str, Any]:
         last_result = state["code_results"][-1]
-        results = "Iteration {i} generated this code: {code}\nIt printed the following: {stdout}".format(i=state["iteration"],code=last_result["code"],stdout=last_result["stdout"])
+        results = "Iteration {i} generated this code: {code}\nIt ran successfully printing the following: {stdout}".format(i=state["iteration"],code=last_result["code"],stdout=last_result["stdout"])
 
         msg = HumanMessage(content=results)
 
