@@ -110,6 +110,16 @@ class ProgramRunner:
             print("\n=== FINAL STATE ===")
             print("(empty)")
 
+    def get_result_image(self, n: int) -> Image.Image | None:
+        """Return the image_clue_n, or None if it doesn't exist."""
+        key = f"image_clue_{n}"
+        value = self.state.get(key)
+        
+        if isinstance(value, Image.Image):
+            return value
+        
+        return None
+
 
 if __name__ == "__main__":
     import argparse

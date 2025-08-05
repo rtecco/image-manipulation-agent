@@ -270,17 +270,13 @@ class VisionAgent:
         config = {"configurable": {"thread_id": "main-thread"}}
         final_state = self.graph.invoke(initial_state, config=config)
 
-        pprint.pp(final_state)
+        result = self.runner.get_result_image(final_state["max_iterations"])
 
-        # # Return final answer or last result
-        # if final_state["final_answer"]:
-        #     return final_state["final_answer"]
-        # elif final_state["code_results"]:
-        #     last_result = final_state["code_results"][-1]
-        #     return last_result.get("stdout", "No output generated")
-        # else:
-        #     return "No solution found"
-    
+        if not result:
+            raise RuntimeError("no final result")
+
+        result.show()
+
     def visualize_graph(self, output_path: Optional[str] = None) -> None:
         """Generate a visualization of the workflow graph."""
         try:
