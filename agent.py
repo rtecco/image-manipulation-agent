@@ -10,6 +10,8 @@ from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage, SystemMessage
 
+from token_rate_limiter import TokenAwareRateLimiter, TokenAwareChatAnthropic
+
 from langgraph.graph.state import StateGraph, END, CompiledStateGraph
 
 from runner import ProgramRunner
@@ -82,8 +84,16 @@ class VisionAgent:
         
         # Initialize model
         if "claude" in model.lower():
-            self.llm = ChatAnthropic(
-                model_name=model, 
+            # Initialize token-aware rate limiter
+            token_rate_limiter = TokenAwareRateLimiter(
+                tokens_per_minute=40000,  # Conservative default for most tiers
+                max_burst_tokens=10000    # Allow some burst capacity
+            )
+            
+            self.llm = TokenAwareChatAnthropic(
+                token_rate_limiter=token_rate_limiter,
+                model_name=model,
+                max_retries=5,
                 timeout=None, 
                 stop=None,
                 temperature=temperature)
