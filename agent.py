@@ -1,6 +1,5 @@
 import re
 import base64
-import pprint
 import io
 from typing import Dict, Any, Optional, List, TypedDict
 from PIL import Image
