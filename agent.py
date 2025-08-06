@@ -180,7 +180,7 @@ class VisionAgent:
         state["messages"].append(msg)
 
         return {
-            "message": state["messages"]
+            "messages": state["messages"]
         }
     
     def _execute_code(self, state: AgentState) -> Dict[str, Any]:
@@ -204,11 +204,6 @@ class VisionAgent:
                 "iteration": state["iteration"]
             }
             updates["code_results"] = state["code_results"] + [result]
-            
-            # Add execution results to messages
-            if stdout or stderr:
-                execution_msg = f"Execution results:\nStdout: {stdout}\nStderr: {stderr}"
-                updates["messages"] = state["messages"] + [HumanMessage(content=execution_msg)]
         
         return updates
 
@@ -221,15 +216,11 @@ class VisionAgent:
         state["messages"].append(msg)
 
         return {
-            "message": state["messages"],
+            "messages": state["messages"],
             "iteration": state["iteration"] + 1
         }
     
     def _route_next(self, state: AgentState) -> str:
-
-        # Time's up
-        if state["iteration"] >= state["max_iterations"]:
-            return "end"
         
         # Re-generate bad code
         if state["code_results"]:
@@ -237,6 +228,10 @@ class VisionAgent:
             if not last_result["success"]:
                 return "redo_generate_code"
 
+        # Time's up
+        if state["iteration"] >= state["max_iterations"]:
+            return "end"
+        
         # Next iteration
         return "next_iteration"
     
