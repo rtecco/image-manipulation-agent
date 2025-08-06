@@ -19,6 +19,7 @@ dependencies = [
     "scikit-learn",
     "scikit-image",
     "dill",
+    "streamlit"
 ]
 
 [project.optional-dependencies]

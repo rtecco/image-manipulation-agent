@@ -15,11 +15,11 @@ from PIL import Image
 from datetime import datetime
 
 def find_most_recent_state_file() -> Optional[Path]:
-    """Find the most recent state.pkl file in temporary directories."""
+    """Find the most recent final_state_*.pkl file in temporary directories."""
     temp_dir = Path(tempfile.gettempdir())
     
-    # Look for state.pkl files in all subdirectories of temp
-    state_files = list(temp_dir.glob("**/state.pkl"))
+    # Look for final_state_*.pkl files in all subdirectories of temp
+    state_files = list(temp_dir.glob("**/final_state_*.pkl"))
     
     if not state_files:
         return None
@@ -101,23 +101,30 @@ def start_repl(state: Dict[str, Any]) -> None:
 
 def main():
     """Main function to find state file and start REPL."""
-    print("Looking for the most recent state file...")
+    print("Looking for the most recent combined state file...")
     
     state_file = find_most_recent_state_file()
     if not state_file:
-        print("No state.pkl files found in temporary directories.")
-        print("Run a vision agent task first to generate state files.")
+        print("No final_state_*.pkl files found in temporary directories.")
+        print("Run a vision agent task first to generate combined state files.")
         sys.exit(1)
     
-    print(f"Found state file: {state_file}")
+    print(f"Found combined state file: {state_file}")
     
-    # Convert timestamp to readable local datetime
-    mtime = state_file.stat().st_mtime
-    local_datetime = datetime.fromtimestamp(mtime)
+    # Use internal timestamp if available, otherwise file mtime
+    state = load_state(state_file)
+    if "_timestamp" in state:
+        timestamp_str = state["_timestamp"]
+        local_datetime = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
+    else:
+        mtime = state_file.stat().st_mtime
+        local_datetime = datetime.fromtimestamp(mtime)
+    
     print(f"Last modified: {local_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Load the state
-    state = load_state(state_file)
+    # Show task info if available
+    if "_task" in state:
+        print(f"Task: {state['_task']}")
     
     # Display summary
     display_state_summary(state)
