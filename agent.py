@@ -12,8 +12,6 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage, SystemMessage
 
 from langgraph.graph.state import StateGraph, END, CompiledStateGraph
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from runner import ProgramRunner
 
@@ -78,8 +76,7 @@ class VisionAgent:
         self,
         runner: ProgramRunner,
         model: str = "claude-3-5-sonnet-20240620",
-        temperature: float = 0.8,
-        checkpoint_dir: Optional[str] = None,
+        temperature: float = 0.7,
     ) -> None:
         """Initialize the vision agent."""
         self.runner = runner
@@ -99,13 +96,6 @@ class VisionAgent:
         self.plan_prompt_template = get_prompt_file("plan_prompt.md")
         self.code_prompt_template = get_prompt_file("code_prompt.md")
         
-        # Setup checkpointing
-        if checkpoint_dir:
-            # TODO: Implement file-based checkpointing
-            self.checkpointer: Optional[BaseCheckpointSaver] = MemorySaver()
-        else:
-            self.checkpointer = MemorySaver()
-
         # Build graph
         self.graph = self._build_graph()
 
@@ -136,7 +126,7 @@ class VisionAgent:
             }
         )
         
-        return workflow.compile(checkpointer=self.checkpointer)
+        return workflow.compile()
     
     def _generate_plan(self, state: AgentState) -> Dict[str, Any]:
         plan_prompt = state["plan_prompt_template"].format(task=state["task"],width=state["encoded_image"]["width"],height=state["encoded_image"]["height"])

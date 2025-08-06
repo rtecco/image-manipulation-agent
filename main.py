@@ -12,7 +12,6 @@ def main() -> None:
     parser.add_argument("--task", required=True, help="Path to task description file")
     parser.add_argument("--image", required=True, help="Path to source image")
     parser.add_argument("--model", default="claude-3-5-sonnet-20240620", help="Model to use")
-    parser.add_argument("--checkpoint-dir", help="Directory for checkpointing")
     
     args = parser.parse_args()
     
@@ -34,8 +33,7 @@ def main() -> None:
     runner = ProgramRunner()
     agent = VisionAgent(
         runner=runner,
-        model=args.model,
-        checkpoint_dir=args.checkpoint_dir
+        model=args.model
     )
     
     result = agent.run(task=task, image=image)
