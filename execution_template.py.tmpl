@@ -94,20 +94,42 @@ try:
     
     def is_dillable(obj):
         try:
-            dill.dumps(obj)
-            return True
-        except Exception as e:
-            # Check if this is a PIL Image that failed serialization
+            # Special handling for PIL Images - force load pixel data
             if hasattr(obj, '__class__') and 'PIL' in str(type(obj)) and 'Image' in str(type(obj)):
-                print(f"ERROR: PIL Image failed dill serialization test: {{e}}", file=sys.stderr)
-                raise RuntimeError(f"PIL Image failed dill serialization: {{e}}")
+                # Create a clean copy with loaded pixel data
+                clean_img = obj.copy()
+                clean_img.load()  # Force load pixel data, removing C objects
+                dill.dumps(clean_img)
+                return True
+            else:
+                dill.dumps(obj)
+                return True
+        except Exception as e:
+            # Debug output for troubleshooting
+            if hasattr(obj, '__class__') and 'PIL' in str(type(obj)) and 'Image' in str(type(obj)):
+                print(f"ERROR: PIL Image serialization failed even after load(): {{e}}", file=sys.stderr)
             return False
     
-    state_vars = {{k: v for k, v in globals().items() 
-                  if not k.startswith('_') 
-                  and not isinstance(v, types.ModuleType)
-                  and k not in ['MatplotlibImportHook', 'MatplotlibFinder', 'is_dillable']
-                  and is_dillable(v)}}
+    # Process variables for serialization - create snapshot first to avoid iteration issues
+    globals_snapshot = dict(globals())
+    state_vars = {{}}
+    
+    for k, v in globals_snapshot.items():
+        if (not k.startswith('_') 
+            and not isinstance(v, types.ModuleType)
+            and k not in ['MatplotlibImportHook', 'MatplotlibFinder', 'is_dillable']):
+            
+            # Special handling for PIL Images
+            if hasattr(v, '__class__') and 'PIL' in str(type(v)) and 'Image' in str(type(v)):
+                try:
+                    clean_img = v.copy()
+                    clean_img.load()  # Force load pixel data
+                    state_vars[k] = clean_img
+                except Exception as e:
+                    print(f"WARNING: Could not serialize PIL Image {{k}}: {{e}}", file=sys.stderr)
+                    continue
+            elif is_dillable(v):
+                state_vars[k] = v
     
     # Add captured plots to state, starting from next available index
     existing_mm_indices = [int(k.split('_')[-1]) for k in state_vars.keys() if k.startswith('mm_clue_')]
