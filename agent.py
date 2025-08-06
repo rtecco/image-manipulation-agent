@@ -130,17 +130,21 @@ class VisionAgent:
     
     def _generate_plan(self, state: AgentState) -> Dict[str, Any]:
         plan_prompt = state["plan_prompt_template"].format(task=state["task"],width=state["encoded_image"]["width"],height=state["encoded_image"]["height"])
-        plan_msg = HumanMessage(
-            content = [
-                 {"type": "text", "text": plan_prompt},
-                 {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": state["encoded_image"]["base64"]}},
-             ]
-        )
         
+        encoded_source_image_msg = HumanMessage(content=[{
+            "type": "image", 
+            "source": {
+                "type": "base64", 
+                "media_type": "image/jpeg", 
+                "data": state["encoded_image"]["base64"]
+            }
+        }])
+
+        plan_msg = HumanMessage(content=plan_prompt)
         state["messages"].append(plan_msg)
 
-        response = self.llm.invoke(state["messages"])
-        
+        response = self.llm.invoke(state["messages"] + [encoded_source_image_msg])
+
         updates = {
             "messages": state["messages"] + [response]
         }
@@ -159,11 +163,29 @@ class VisionAgent:
     
     def _generate_code(self, state: AgentState) -> Dict[str, Any]:        
         code_prompt = state["code_prompt_template"].format(i=state["iteration"])
+        
+        # Get the runner image from the previous iteration
+        runner_image = self.runner.get_result_image(state["iteration"] - 1)
+        
+        if not runner_image:
+            raise RuntimeError(f"Expected image_clue_{state['iteration'] - 1} from previous iteration but not found")
+        
+        # Inclue the last image in this LLM invocation only not the conversation
+        encoded_runner_image = encode_image(runner_image)
+        encoded_runner_image_msg = HumanMessage(content=[{
+                "type": "image", 
+                "source": {
+                    "type": "base64", 
+                    "media_type": "image/jpeg", 
+                    "data": encoded_runner_image["base64"]
+                }
+            }])
+
         msg = HumanMessage(content=code_prompt)
 
         state["messages"].append(msg)
 
-        response = self.llm.invoke(state["messages"])
+        response = self.llm.invoke(state["messages"] + [encoded_runner_image_msg])
                 
         updates = {
             "messages": state["messages"] + [response],
