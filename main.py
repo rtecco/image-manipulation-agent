@@ -12,6 +12,8 @@ def main() -> None:
     parser.add_argument("--task", required=True, help="Path to task description file")
     parser.add_argument("--image", required=True, help="Path to source image")
     parser.add_argument("--config",required=True, help="Path to experiment config file")
+    parser.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"], 
+                        help="Set logging level")
     
     args = parser.parse_args()
     
@@ -39,7 +41,8 @@ def main() -> None:
     runner = ProgramRunner()
     agent = VisionAgent(
         runner=runner,
-        config_path=args.config
+        config_path=args.config,
+        log_level=args.log_level
     )
     
     result = agent.run(task=task, image=image)

@@ -2,6 +2,7 @@ import re
 import base64
 import io
 import yaml
+import logging
 from typing import Dict, Any, Optional, List, TypedDict
 from PIL import Image
 from pathlib import Path
@@ -77,13 +78,18 @@ class VisionAgent:
     def __init__(
         self,
         runner: ProgramRunner,
-        config_path: str
+        config_path: str,
+        log_level: Optional[str] = None
     ) -> None:
         """Initialize the vision agent."""
         self.runner = runner
         
         # Load config
         config = self._load_config(config_path)
+        
+        # Setup logging
+        self._setup_logging(log_level or "INFO")
+        self.logger = logging.getLogger(__name__)
         
         # Initialize model
         model = config["model"]["name"]
@@ -135,6 +141,17 @@ class VisionAgent:
             return Path(prompt_file).read_text().strip()
         else:
             raise ValueError("Must specify either inline prompt or prompt file")
+    
+    def _setup_logging(self, log_level) -> None:
+        """Setup logging configuration."""
+        level = getattr(logging, log_level)
+        format_str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        
+        logging.basicConfig(
+            level=level,
+            format=format_str,
+            force=True
+        )
 
     def _build_graph(self) -> CompiledStateGraph:
         """Build the LangGraph workflow."""
@@ -182,6 +199,8 @@ class VisionAgent:
 
         response = self.llm.invoke(state["messages"] + [encoded_source_image_msg])
 
+        self.logger.info(f"Plan generated: {response.content}")
+
         updates = {
             "messages": state["messages"] + [response]
         }
@@ -192,7 +211,7 @@ class VisionAgent:
         if steps_match:
             max_steps = int(steps_match.group(1))
             updates["max_iterations"] = max_steps
-            print(f"Updated max_iterations to {max_steps} based on plan")
+            self.logger.info(f"Updated max_iterations to {max_steps} based on plan")
         else:
             raise RuntimeError("Plan didn't output the number of steps")
         
@@ -235,7 +254,7 @@ class VisionAgent:
         results = "Iteration {i} generated this code: {code}\nIt failed with the following error {stderr}. Please fix the error. It is still iteration {i}.".format(i=state["iteration"],code=last_result["code"],stderr=last_result["stderr"])
 
         msg = HumanMessage(content=results)
-        print(msg)
+        self.logger.debug(f"Redo code generation message: {msg}")
         state["messages"].append(msg)
 
         return {
@@ -251,6 +270,8 @@ class VisionAgent:
         updates = {}
         
         if code:
+            self.logger.debug(code)
+
             # Execute the code
             stdout, stderr, success = self.runner.execute_code(code)
             
@@ -271,7 +292,9 @@ class VisionAgent:
         results = "Iteration {i} generated this code: {code}\nIt ran successfully printing the following: {stdout}".format(i=state["iteration"],code=last_result["code"],stdout=last_result["stdout"])
 
         msg = HumanMessage(content=results)
-
+        
+        self.logger.debug(msg)
+        
         state["messages"].append(msg)
 
         return {
@@ -330,7 +353,7 @@ class VisionAgent:
             final_state = self.graph.invoke(initial_state, config=config)
         except Exception as e:
             error_message = str(e)
-            print(f"❌ Graph execution failed: {error_message}")
+            self.logger.error(f"❌ Graph execution failed: {error_message}")
             # Use the initial state as fallback for reporting
             final_state = initial_state
             final_state["_execution_error"] = error_message
@@ -345,7 +368,7 @@ class VisionAgent:
         
         # Save combined state for dashboard
         state_path = self._save_combined_state(combined_state)
-        print(f"💾 State saved: {state_path}")
+        self.logger.debug(f"💾 State saved: {state_path}")
 
         if error_message:
             return f"Task failed: {error_message}"
@@ -391,7 +414,7 @@ class VisionAgent:
             if output_path:
                 with open(output_path, 'wb') as f:
                     f.write(graph_image)
-                print(f"Graph saved to {output_path}")
+                self.logger.debug(f"Graph saved to {output_path}")
             else:
                 # Display inline if possible
                 from PIL import Image
@@ -400,6 +423,6 @@ class VisionAgent:
                 img.show()
                 
         except ImportError:
-            print("Graph visualization requires optional dependencies. Install with: uv pip install -e .[viz]")
+            self.logger.error("Graph visualization requires optional dependencies. Install with: uv pip install -e .[viz]")
         except Exception as e:
-            print(f"Error generating graph visualization: {e}")
+            self.logger.error(f"Error generating graph visualization: {e}")
