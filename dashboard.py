@@ -201,13 +201,13 @@ with col2:
                                 else:
                                     # Regular text content
                                     if len(content) > 1000:
-                                        st.text_area("Content", content, height=200)
+                                        st.text_area("Content", content, height=200, key=f"msg_content_{i}")
                                     else:
                                         st.code(content, language="text")
                             except json.JSONDecodeError:
                                 # Not valid JSON, display as regular text
                                 if len(content) > 1000:
-                                    st.text_area("Content", content, height=200)
+                                    st.text_area("Content", content, height=200, key=f"msg_content_json_{i}")
                                 else:
                                     st.code(content, language="text")
                         else:
