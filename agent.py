@@ -347,14 +347,10 @@ class VisionAgent:
         state_path = self._save_combined_state(combined_state)
         print(f"💾 State saved: {state_path}")
 
-        # Generate Streamlit report using combined state
-        report_path = self.generate_streamlit_report(combined_state)
-        print(f"📊 Report generated: {report_path}")
-        
         if error_message:
-            return f"Task failed: {error_message}. Report: {report_path}"
+            return f"Task failed: {error_message}"
         else:
-            return f"Task completed. Report: {report_path}"
+            return "Task completed"
 
     def _create_combined_state(self, final_state: AgentState) -> Dict[str, Any]:
         """Create combined state with both agent and runner data."""        
@@ -385,133 +381,6 @@ class VisionAgent:
         
         return state_path
 
-    def generate_streamlit_report(self, combined_state: Dict[str, Any]) -> str:
-        """Generate a standalone Streamlit report using combined state."""
-        import base64
-        import io
-        
-        # Use existing timestamp from combined state
-        timestamp = combined_state["_timestamp"]
-        report_path = f"report_{timestamp}.py"
-        
-        # Extract data from combined state (includes both agent and runner state)
-        task = combined_state.get("_task", combined_state.get("task", "Unknown Task"))
-        images = {}
-        
-        # Get all image_clue_n from the combined state
-        for key, value in combined_state.items():
-            if key.startswith("image_clue_") and hasattr(value, 'save'):
-                try:
-                    n = int(key.split("_")[-1])
-                    # Convert image to base64 for embedding
-                    buffer = io.BytesIO()
-                    value.save(buffer, format='PNG')
-                    img_b64 = base64.b64encode(buffer.getvalue()).decode()
-                    images[n] = img_b64
-                except (ValueError, AttributeError):
-                    continue
-        
-        # Generate enhanced Streamlit script
-        script = f'''"""Generated Streamlit report for Vision Agent run - {timestamp}"""
-import streamlit as st
-import base64
-from io import BytesIO
-from PIL import Image
-
-st.set_page_config(page_title="Vision Agent Report", layout="wide")
-
-st.title("🤖 Vision Agent Report")
-st.markdown("---")
-
-# Task info
-st.subheader("📋 Task")
-st.info("{task}")
-st.write("**Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
-
-# Show execution status
-execution_error = {repr(combined_state.get("_execution_error"))}
-if execution_error:
-    st.error(f"⚠️ **Execution Failed:** {{execution_error}}")
-else:
-    st.success("✅ **Execution Completed Successfully**")
-
-# Tabs for different views
-tab1, tab2, tab3 = st.tabs(["🖼️ Images", "💻 Code", "📊 Summary"])
-
-with tab1:
-    images = {repr(images)}
-    if images:
-        st.markdown(f"**{{len(images)}} images generated:**")
-        
-        # Image selector
-        image_keys = sorted(images.keys())
-        selected_img = st.selectbox("Select image:", image_keys, 
-                                  format_func=lambda x: f"Step {{x}}")
-        
-        # Display selected image
-        img_data = base64.b64decode(images[selected_img])
-        img = Image.open(BytesIO(img_data))
-        st.image(img, caption=f"Step {{selected_img}}", use_container_width=True)
-        
-        # Thumbnail gallery
-        if len(images) > 1:
-            st.markdown("**All steps:**")
-            cols = st.columns(min(len(images), 4))
-            for i, n in enumerate(image_keys):
-                with cols[i % 4]:
-                    img_data = base64.b64decode(images[n])
-                    img = Image.open(BytesIO(img_data))
-                    st.image(img, caption=f"Step {{n}}", use_container_width=True)
-    else:
-        st.info("No images generated in this run")
-
-with tab2:
-    code_results = {repr(combined_state.get("code_results", []))}
-    if code_results:
-        st.markdown("**Code execution history:**")
-        
-        for i, result in enumerate(code_results, 1):
-            status_emoji = "✅" if result.get('success') else "❌"
-            
-            with st.expander(f"{{status_emoji}} Iteration {{i}}", 
-                           expanded=(i == len(code_results))):
-                st.markdown("**Code:**")
-                st.code(result.get("code", ""), language="python")
-                
-                if result.get("stdout") or result.get("stderr"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if result.get("stdout"):
-                            st.markdown("**Output:**")
-                            st.success(result["stdout"])
-                    with col2:
-                        if result.get("stderr"):
-                            st.markdown("**Error:**")
-                            st.error(result["stderr"])
-    else:
-        st.info("No code execution results")
-
-with tab3:
-    st.markdown("**Run Statistics:**")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Iterations", len(code_results))
-    with col2:
-        success_count = sum(1 for r in code_results if r.get('success'))
-        st.metric("Successful", success_count)
-    with col3:
-        st.metric("Images Created", len(images))
-    
-    if code_results:
-        success_rate = success_count / len(code_results) * 100
-        st.markdown(f"**Success Rate:** {{success_rate:.1f}}%")
-'''
-        
-        with open(report_path, 'w') as f:
-            f.write(script)
-        
-        return report_path
 
     def visualize_graph(self, output_path: Optional[str] = None) -> None:
         """Generate a visualization of the workflow graph."""
