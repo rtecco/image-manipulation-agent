@@ -1,0 +1,31 @@
+# Experiment Configuration
+experiment:
+  name: "v1"
+  description: "Visual task processing with iterative code generation"
+
+# Model Configuration
+model:
+  name: "claude-3-5-sonnet-20240620"
+  temperature: 0.7
+  max_retries: 5
+  
+# Rate Limiting
+rate_limiting:
+  tokens_per_minute: 40000
+  max_burst_tokens: 10000
+
+# Prompts
+prompts:
+  plan_prompt: |
+    Extract the important text, visual regions and styling elements of this ad. Then come up with a layout to re-arrange them into a new IAB standard Leaderboard banner ad. Represent the layout as a set of bounding boxes. Bounding boxes SHOULD NOT OVERLAP. Then given these bounding boxes, come up with a detailed multi-step plan to create the new ad by writing Python programs. Each step should operate on a bounding box. And in each step, you will write Python code using common libraries. You can use Pillow, OpenCV, numpy, pandas, matplotlib, scikit-learn and scikit-image. Do not use cv2. You will be able to re-use variables and functions between steps. You will be able to pass the output of `print()` statements between steps. Consider proper alpha blending. Layer visual elements first onto a background first and then add text last. Don't just resize the source image. Do not write any code yet. The source image dimensions are width={width} and height={height}. Include the number of steps in the plan like this: STEPS=`<number of steps>`.
+
+  code_prompt: |
+    It is iteration {i}. The image from the previous iteration (if any) is included. Write the Python program to implement step {i} of your plan given the bounding box for that stage. You can use Pillow, OpenCV, numpy, pandas, matplotlib, scikit-learn and scikit-image. Do not use cv2. The Python you generate will be executed in a sandbox on macOS. The original source image is in a variable called `image_clue_0`. You can reference variables and functions set by the previous code snippets; you don't need I/O. The code output should be a JPEG PIL image assigned to `image_clue_{i}`. You can also `print()` to output program results. Output your code in `<code></code>` blocks.
+
+  system_prompt_file: "system-prompt.md"
+
+# Execution
+execution:
+  max_iterations: 10
+  recursion_limit: 50
+  timeout_seconds: 300

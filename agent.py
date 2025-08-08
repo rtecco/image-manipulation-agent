@@ -1,6 +1,7 @@
 import re
 import base64
 import io
+import yaml
 from typing import Dict, Any, Optional, List, TypedDict
 from PIL import Image
 from pathlib import Path
@@ -76,24 +77,32 @@ class VisionAgent:
     def __init__(
         self,
         runner: ProgramRunner,
-        model: str = "claude-3-5-sonnet-20240620",
-        temperature: float = 0.7,
+        config_path: str
     ) -> None:
         """Initialize the vision agent."""
         self.runner = runner
         
+        # Load config
+        config = self._load_config(config_path)
+        
         # Initialize model
+        model = config["model"]["name"]
+        temperature = config["model"]["temperature"]
+        max_retries = config["model"]["max_retries"]
+        tokens_per_minute = config["rate_limiting"]["tokens_per_minute"]
+        max_burst_tokens=config["rate_limiting"]["max_burst_tokens"]
+
         if "claude" in model.lower():
             # Initialize token-aware rate limiter
             token_rate_limiter = TokenAwareRateLimiter(
-                tokens_per_minute=40000,  # Conservative default for most tiers
-                max_burst_tokens=10000    # Allow some burst capacity
+                tokens_per_minute=tokens_per_minute,
+                max_burst_tokens=max_burst_tokens,
             )
             
             self.llm = TokenAwareChatAnthropic(
                 token_rate_limiter=token_rate_limiter,
                 model_name=model,
-                max_retries=5,
+                max_retries=max_retries,
                 timeout=None, 
                 stop=None,
                 temperature=temperature)
@@ -102,11 +111,30 @@ class VisionAgent:
         else:
             raise ValueError(f"Unsupported model: {model}")
 
-        self.plan_prompt_template = get_prompt_file("plan_prompt.md")
-        self.code_prompt_template = get_prompt_file("code_prompt.md")
+        # Load prompts
+        prompts = config["prompts"]
+        self.plan_prompt_template = self._load_prompt(prompts["plan_prompt"], prompts.get("plan_prompt_file"))
+        self.code_prompt_template = self._load_prompt(prompts["code_prompt"], prompts.get("code_prompt_file"))
+        
+        # Store execution config
+        self.execution_config = config["execution"]
         
         # Build graph
         self.graph = self._build_graph()
+    
+    def _load_config(self, config_path: str) -> Dict[str, Any]:
+        """Load configuration from YAML file."""
+        with open(config_path, 'r') as f:
+            return yaml.safe_load(f)
+    
+    def _load_prompt(self, inline_prompt: Optional[str], prompt_file: Optional[str]) -> str:
+        """Load prompt from inline text or file."""
+        if inline_prompt:
+            return inline_prompt.strip()
+        elif prompt_file:
+            return Path(prompt_file).read_text().strip()
+        else:
+            raise ValueError("Must specify either inline prompt or prompt file")
 
     def _build_graph(self) -> CompiledStateGraph:
         """Build the LangGraph workflow."""
@@ -294,7 +322,7 @@ class VisionAgent:
         }
         
         # Run the graph with increased recursion limit
-        config = {"recursion_limit": 50}
+        config = {"recursion_limit": self.execution_config["recursion_limit"]}
         final_state = None
         error_message = None
         

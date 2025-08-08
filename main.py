@@ -11,7 +11,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Vision Agent for visual task processing")
     parser.add_argument("--task", required=True, help="Path to task description file")
     parser.add_argument("--image", required=True, help="Path to source image")
-    parser.add_argument("--model", default="claude-3-5-sonnet-20240620", help="Model to use")
+    parser.add_argument("--config",required=True, help="Path to experiment config file")
     
     args = parser.parse_args()
     
@@ -30,10 +30,16 @@ def main() -> None:
         print(f"Error loading image {args.image}: {e}", file=sys.stderr)
         sys.exit(1)
     
+    # Validate config file exists
+    config_file = Path(args.config)
+    if not config_file.exists():
+        print(f"Error: Config file {args.config} not found", file=sys.stderr)
+        sys.exit(1)
+    
     runner = ProgramRunner()
     agent = VisionAgent(
         runner=runner,
-        model=args.model
+        config_path=args.config
     )
     
     result = agent.run(task=task, image=image)
