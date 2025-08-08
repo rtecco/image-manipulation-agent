@@ -1,0 +1,108 @@
+# Experiment Configuration
+experiment:
+  name: "v3"
+  description: "Visual task processing with improved layout planning to prevent overlapping and artifacts"
+
+# Model Configuration
+model:
+  name: "claude-3-5-sonnet-20240620"
+  temperature: 0.7
+  max_retries: 5
+  
+# Rate Limiting
+rate_limiting:
+  tokens_per_minute: 40000
+  max_burst_tokens: 10000
+
+# Prompts
+prompts:
+  plan_prompt: |
+    Extract the important text, visual regions and styling elements of this ad.
+    Then create a clean, professional layout for a new IAB standard Leaderboard banner ad (728x90 pixels).
+    
+    CRITICAL LAYOUT REQUIREMENTS:
+    1. Define a grid system with clear margins (minimum 10px from edges)
+    2. Assign specific, NON-OVERLAPPING bounding boxes for each element
+    3. Leave adequate whitespace between elements (minimum 5px spacing)
+    4. Ensure text has sufficient contrast against backgrounds
+    5. Plan element hierarchy: background → visual elements → text overlay
+    
+    For each bounding box, specify:
+    - Exact pixel coordinates (x, y, width, height)
+    - Element type (background, image, text, button)
+    - Z-order/layer priority
+    - Margin/padding requirements
+    
+    Create a detailed multi-step plan using Python programs. Each step should:
+    - Work within its designated bounding box ONLY
+    - Not modify pixels outside its assigned region
+    - Use proper alpha compositing for overlays
+    - Implement anti-aliasing for text rendering
+    - Apply appropriate filters/effects without bleeding
+    
+    You can use Pillow, OpenCV, numpy, pandas, matplotlib, scikit-learn, scikit-image, and Wand (ImageMagick Python bindings).
+    Do not use cv2. Consider proper color management and ensure professional output quality.
+    Do not write any code yet. The source image dimensions are width={width} and height={height}.
+    Include the number of steps in the plan like this: STEPS=`<number of steps>`.
+
+  code_prompt: |
+    It is iteration {i}. The image from the previous iteration (if any) is included.
+    Write the Python program to implement step {i} of your plan within the designated bounding box.
+    
+    STRICT IMPLEMENTATION RULES:
+    1. Work ONLY within your assigned bounding box coordinates
+    2. Use proper alpha blending for any overlays
+    3. Ensure text is crisp with anti-aliasing enabled
+    4. Apply effects (blur, shadows) without affecting neighboring regions
+    5. Use high-quality resampling (LANCZOS) for any resizing
+    6. Validate that no pixels are modified outside your bounding box
+    
+    Available libraries: Pillow, OpenCV, numpy, pandas, matplotlib, scikit-learn, scikit-image, and Wand (ImageMagick Python bindings).
+    Do not use cv2. The Python executes in a sandbox on macOS.
+    The original source image is in variable `image_clue_0`.
+    Reference variables/functions from previous steps as needed.
+    Output must be a JPEG PIL image assigned to `image_clue_{i}`.
+    
+    For ImageMagick operations via Wand:
+    ```python
+    from wand.image import Image as WandImage
+    import io
+    
+    # Convert PIL to Wand (preserve quality)
+    pil_bytes = io.BytesIO()
+    your_pil_image.save(pil_bytes, format='PNG', quality=95)
+    pil_bytes.seek(0)
+    
+    with WandImage(blob=pil_bytes.getvalue()) as wand_img:
+        # ImageMagick operations here
+        wand_img.blur(radius=2, sigma=1)  # Use conservative parameters
+        
+        # Convert back to PIL (high quality)
+        result_bytes = io.BytesIO()
+        wand_img.format = 'png'  # Use PNG for intermediate steps
+        wand_img.compression_quality = 95
+        wand_img.save(result_bytes)
+        result_bytes.seek(0)
+        intermediate_result = Image.open(result_bytes)
+        
+        # Final conversion to JPEG with quality control
+        final_bytes = io.BytesIO()
+        intermediate_result.convert('RGB').save(final_bytes, format='JPEG', quality=90, optimize=True)
+        final_bytes.seek(0)
+        image_clue_{i} = Image.open(final_bytes)
+    ```
+    
+    QUALITY REQUIREMENTS:
+    - Use JPEG quality=90 for final output
+    - Apply proper color space conversion (RGB)
+    - Enable optimization flags
+    - Ensure smooth gradients and clean edges
+    
+    Print progress and bounding box validation info.
+    Output your code in `<code></code>` blocks.
+
+# Execution
+execution:
+  max_iterations: 12
+  recursion_limit: 50
+  timeout_seconds: 300
