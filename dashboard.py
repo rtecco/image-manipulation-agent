@@ -1,9 +1,19 @@
 """Enhanced Streamlit dashboard for browsing Vision Agent runs."""
 
 import streamlit as st
+import os
 from report_utils import find_state_files, get_state_info, get_images_from_state, extract_plan
 
 st.set_page_config(page_title="Vision Agent Dashboard", layout="wide", initial_sidebar_state="expanded")
+
+def delete_run(state_file_path):
+    """Delete a run by removing its state file."""
+    try:
+        os.remove(state_file_path)
+        return True
+    except Exception as e:
+        st.error(f"Error deleting run: {e}")
+        return False
 
 # Header
 st.title("🤖 Vision Agent Dashboard")
@@ -64,16 +74,31 @@ with col1:
         status_emoji = "✅" if run["success"] else "❌"
         time_str = run['modified'].strftime('%m/%d %H:%M')
         
-        # Create a nice card-like button
-        button_text = f"{status_emoji} **{time_str}**\n\n{run['task'][:50]}..."
+        # Create a container for the run with delete button
+        run_container = st.container()
         
-        if st.button(
-            button_text,
-            key=f"run_{i}",
-            use_container_width=True,
-            help=f"Task: {run['task']}\nCode Executions: {run['code_executions']}\nIterations: {run['iterations']}/{run['max_iterations']}\nCompleted: {run['completed']}"
-        ):
-            selected_idx = i
+        with run_container:
+            # Create columns for the run button and delete button
+            run_col, delete_col = st.columns([4, 1])
+            
+            with run_col:
+                # Create a nice card-like button
+                button_text = f"{status_emoji} **{time_str}**\n\n{run['task'][:50]}..."
+                
+                if st.button(
+                    button_text,
+                    key=f"run_{i}",
+                    use_container_width=True,
+                    help=f"Task: {run['task']}\nCode Executions: {run['code_executions']}\nIterations: {run['iterations']}/{run['max_iterations']}\nCompleted: {run['completed']}"
+                ):
+                    selected_idx = i
+            
+            with delete_col:
+                # Add delete button
+                if st.button("🗑️", key=f"delete_{i}", help="Delete this run", use_container_width=True):
+                    if delete_run(run["path"]):
+                        st.success("Run deleted successfully!")
+                        st.rerun()
         
         # Add some spacing
         st.markdown("")
