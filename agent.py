@@ -68,10 +68,6 @@ def encode_image(image):
         'height': height
     })
 
-def get_prompt_file(fn: str) -> str:
-    path = Path(__file__).parent / fn
-    return path.read_text().strip()
-
 class VisionAgent:
     """LangGraph agent for visual task processing."""
     
@@ -124,8 +120,8 @@ class VisionAgent:
 
         # Load prompts
         prompts = config["prompts"]
-        self.plan_prompt_template = self._load_prompt(prompts["plan_prompt"], prompts.get("plan_prompt_file"))
-        self.code_prompt_template = self._load_prompt(prompts["code_prompt"], prompts.get("code_prompt_file"))
+        self.plan_prompt_template = prompts["plan_prompt"].strip()
+        self.code_prompt_template = prompts["code_prompt"].strip()
         
         # Store execution config
         self.execution_config = config["execution"]
@@ -137,15 +133,6 @@ class VisionAgent:
         """Load configuration from YAML file."""
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
-    
-    def _load_prompt(self, inline_prompt: Optional[str], prompt_file: Optional[str]) -> str:
-        """Load prompt from inline text or file."""
-        if inline_prompt:
-            return inline_prompt.strip()
-        elif prompt_file:
-            return Path(prompt_file).read_text().strip()
-        else:
-            raise ValueError("Must specify either inline prompt or prompt file")
     
     def _setup_logging(self, log_level) -> None:
         """Setup logging configuration."""
