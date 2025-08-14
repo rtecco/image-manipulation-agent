@@ -105,13 +105,18 @@ class VisionAgent:
                 max_burst_tokens=max_burst_tokens,
             )
             
+            # Claude 4 specific settings to prevent truncation
+            max_tokens = 4096 if "claude-sonnet-4" in model else 2048
+            
             self.llm = TokenAwareChatAnthropic(
                 token_rate_limiter=token_rate_limiter,
                 model_name=model,
                 max_retries=max_retries,
                 timeout=None, 
                 stop=None,
-                temperature=temperature)
+                temperature=temperature,
+                max_tokens=max_tokens  # Explicit max_tokens for Claude 4
+            )
         elif "gemini" in model.lower():
             self.llm = ChatGoogleGenerativeAI(model=model, temperature=temperature)
         else:
@@ -267,7 +272,10 @@ class VisionAgent:
         """Execute the generated code."""
 
         last_message = state["messages"][-1]
-        code = self._extract_code(last_message.content)
+        
+        # Extract full content from Claude 4 message
+        content = self._get_full_message_content(last_message)
+        code = self._extract_code(content)
         
         updates = {}
         
@@ -318,6 +326,59 @@ class VisionAgent:
         
         # Next iteration
         return "next_iteration"
+    
+    def _get_full_message_content(self, message) -> str:
+        """Extract full content from Claude 4 message, handling truncation issues."""
+        self.logger.debug(f"🔍 Extracting content from message type: {type(message)}")
+        
+        # Handle different message content formats
+        if hasattr(message, 'content'):
+            content = message.content
+            self.logger.debug(f"🔍 Message content type: {type(content)}")
+            
+            # If content is a string, return it directly
+            if isinstance(content, str):
+                self.logger.debug(f"🔍 String content length: {len(content)}")
+                return content
+            
+            # If content is a list (Claude 4 multimodal format)
+            elif isinstance(content, list):
+                self.logger.debug(f"🔍 List content with {len(content)} parts")
+                text_parts = []
+                for i, part in enumerate(content):
+                    self.logger.debug(f"🔍 Part {i}: {type(part)}")
+                    if isinstance(part, dict):
+                        # Handle {"type": "text", "text": "..."} format
+                        if part.get("type") == "text" and "text" in part:
+                            text_parts.append(part["text"])
+                        # Handle Claude 4 specific formats
+                        elif part.get("type") == "text" and "content" in part:
+                            text_parts.append(part["content"])
+                        # Handle other text fields
+                        elif "text" in part:
+                            text_parts.append(part["text"])
+                        elif "content" in part:
+                            text_parts.append(str(part["content"]))
+                    elif isinstance(part, str):
+                        text_parts.append(part)
+                
+                result = "\n".join(text_parts)
+                self.logger.debug(f"🔍 Extracted from list, final length: {len(result)}")
+                return result
+            
+            # If content is a dict
+            elif isinstance(content, dict):
+                self.logger.debug(f"🔍 Dict content keys: {list(content.keys())}")
+                if "text" in content:
+                    return content["text"]
+                elif "content" in content:
+                    return str(content["content"])
+            
+            # Fallback: convert to string
+            return str(content)
+        
+        # Final fallback
+        return str(message)
     
     def _extract_code(self, content: str) -> Optional[str]:
         """Extract code from <code></code> tags."""
