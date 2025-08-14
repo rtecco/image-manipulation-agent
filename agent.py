@@ -429,14 +429,31 @@ class VisionAgent:
         """Create combined state with both agent and runner data."""        
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # Get runner state metadata
+        runner_state = self.runner.get_state()
+        
+        # Extract actual PIL Images from IPC runner
+        image_variables = {}
+        for var_name, var_info in runner_state.items():
+            if var_name.startswith('image_clue_') and 'Image' in var_info.get('type', ''):
+                # Get the actual PIL Image object
+                image_index = int(var_name.split('_')[-1])
+                actual_image = self.runner.get_result_image(image_index)
+                if actual_image:
+                    image_variables[var_name] = actual_image
+                    self.logger.debug(f"📸 Retrieved {var_name}: {actual_image.size}")
+        
         # Combine agent state and runner state
         combined_state = {
             **final_state,  # All agent state (messages, code_results, etc.)
-            **self.runner.get_state(),  # All runner state (image_clue_n, etc.)
+            **runner_state,  # Runner state metadata
+            **image_variables,  # Actual PIL Images for dashboard
             "_timestamp": timestamp,
             "_task": final_state["task"],
             "_completed": True
         }
+        
+        self.logger.debug(f"📦 Combined state includes {len(image_variables)} images: {list(image_variables.keys())}")
         
         return combined_state
 
