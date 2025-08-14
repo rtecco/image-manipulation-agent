@@ -242,7 +242,9 @@ class VisionAgent:
         state["messages"].append(msg)
 
         response = self.llm.invoke(state["messages"] + [encoded_runner_image_msg])
-                
+
+        self.logger.debug(f"_generate_code: {response.content}")
+        
         updates = {
             "messages": state["messages"] + [response],
         }
