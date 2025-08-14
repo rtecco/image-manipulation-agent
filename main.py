@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image
 
 from agent import VisionAgent
-from runner import ProgramRunner
+from ipc_runner import IPCProgramRunner
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Vision Agent for visual task processing")
@@ -38,7 +38,7 @@ def main() -> None:
         print(f"Error: Config file {args.config} not found", file=sys.stderr)
         sys.exit(1)
     
-    runner = ProgramRunner()
+    runner = IPCProgramRunner()
     agent = VisionAgent(
         runner=runner,
         config_path=args.config,

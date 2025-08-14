@@ -16,7 +16,7 @@ from token_rate_limiter import TokenAwareRateLimiter, TokenAwareChatAnthropic
 
 from langgraph.graph.state import StateGraph, END, CompiledStateGraph
 
-from runner import ProgramRunner
+from ipc_runner import IPCProgramRunner
 
 class EncodedImage(TypedDict):
     base64: str
@@ -73,7 +73,7 @@ class VisionAgent:
     
     def __init__(
         self,
-        runner: ProgramRunner,
+        runner: IPCProgramRunner,
         config_path: str,
         log_level: Optional[str] = None
     ) -> None:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 from agent import VisionAgent
-from runner import ProgramRunner
+from ipc_runner import IPCProgramRunner
 
 if __name__ == "__main__":
-    runner = ProgramRunner()
+    runner = IPCProgramRunner()
     agent = VisionAgent(runner=runner)
     
     agent.visualize_graph()
